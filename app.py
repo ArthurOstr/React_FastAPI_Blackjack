@@ -47,7 +47,7 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         # Guard logic
         if "user_id" not in session:
-            return jsonify({"error": "Authentication requiered"}), 401
+            return jsonify({"error": "Authentication required"}), 401
         return f(*args, **kwargs)
 
     return decorated_function
@@ -79,7 +79,7 @@ def register():
     if not username or not password:
         return jsonify({"error": "Missing username or password"}), 400
 
-    # Check if nickname is takem
+    # Check if nickname is taken
     if User.query.filter_by(username=username).first():
         return (jsonify({"error": "Nickname taken! Try another one."}),)
 

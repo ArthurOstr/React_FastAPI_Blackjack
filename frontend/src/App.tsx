@@ -1,36 +1,20 @@
 import { useState, useEffect } from "react";
 import "./App.css";
-
-interface GameResponse {
-  game_id: number;
-  player_hand: { rank: string; suit: string }[];
-  dealer_hand?: { rank: string; suit: string }[];
-  dealer_card?: { rank: string; suit: string };
-  user_money: number;
-  message: string;
-  status: string;
-}
-interface LoginResponse {
-  message: string;
-  username: string;
-  error?: string;
-}
+import type { Card, User, GameState } from "./types";
 
 function App() {
   // Auth State
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [user, setUser] = useState<string>("");
+  const [user, setUser] = useState<User | null>(null);
 
   // Game State
-  const [gameId, setGameId] = useState<number | null>(null);
+  const [gameId, setGameId] = useState<GameState | null>(null);
   const [money, setMoney] = useState<number>(1000);
   const [message, setMessage] = useState<string>("Ready to play?");
-  const [hand, setHand] = useState<{ rank: string; suit: string }[]>([]);
-  const [dealerHand, setDealerHand] = useState<
-    { rank: string; suit: string }[]
-  >([]);
+  const [hand, setHand] = useState<Card[]>([]);
+  const [dealerHand, setDealerHand] = useState<Card[]>([]);
 
   // --- System Check on Load ---
   useEffect(() => {
@@ -259,7 +243,7 @@ function App() {
                 <h3>Your Hand:</h3>
                 <div
                   style={{
-                    display: "flex",
+                     display: "flex",
                     gap: "10px",
                     justifyContent: "center",
                   }}
