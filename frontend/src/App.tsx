@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import "./App.css";
 import type { Card, User, GameState } from "./types";
+import AuthForm from './auth/AuthForm';
 
 function App() {
   // Auth State
-  const [username, setUsername] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
 
@@ -35,33 +34,6 @@ function App() {
     });
   }, []);
 
-  // --- Login Logic ---
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault(); // Stop page reload
-
-    try {
-      const response = await fetch("/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data: LoginResponse = await response.json();
-
-      if (!response.ok) {
-        setMessage(data.error || "Login failed");
-      } else {
-        setIsLoggedIn(true);
-        setUser(data.username);
-        setMessage(`Welcome, ${data.username}`);
-        // Fetch fresh money
-        fetchProfile();
-      }
-    } catch (err) {
-      console.error(err);
-      setMessage("Network Error");
-    }
-  }
 
   // --- Profile Fetcher---
   async function fetchProfile() {
@@ -155,25 +127,15 @@ function App() {
     <div className="card">
       <h1>♠️ Operator Blackjack ♦️</h1>
       <p>Status: {message}</p>
-
       {!isLoggedIn ? (
-        // --- LOGIN FORM ---
-        <form onSubmit={handleLogin} className="login-form">
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button type="submit">Login</button>
-        </form>
+        <AuthForm onAuthSuccess={(data) => {
+          setIsLoggedIn(true);
+          setUser(data.username);
+          setMoney(data.money);
+        }}
+        />
       ) : (
+
         // --- GAME INTERFACE ---
         <div className="game-board">
           <h2>
