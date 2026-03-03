@@ -1,12 +1,12 @@
 import { type FormEvent, useState} from "react";
 import type { User } from "../types";
-import { loginUser } from "../api/Auth.ts";
+import { loginUser, registerUser } from "../api/Auth.ts";
 
 interface AuthProps {
     onAuthSuccess: (user: User) => void;
 }
 
-function AuthForm({ onAuthSuccess }: AuthProps) {
+export default function AuthForm({ onAuthSuccess }: AuthProps) {
       const [isLoginView, setIsLoginView] = useState<boolean>(false);
       const [username, setUsername] = useState<string>("");
       const [password, setPassword] = useState<string>("");
@@ -16,7 +16,12 @@ function AuthForm({ onAuthSuccess }: AuthProps) {
           e.preventDefault();
           console.log("Login", username, password);
           try {
-          const data = await loginUser(username, password);
+          let data;
+          if (isLoginView) {
+              data = await loginUser(username, password);
+          } else {
+              data = await registerUser(username, password);
+          }
           onAuthSuccess(data);
     } catch (error) {
         console.error(error)

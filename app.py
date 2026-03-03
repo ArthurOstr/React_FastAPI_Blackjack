@@ -1,21 +1,25 @@
 import os
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask_cors import CORS
 from BJ_classes import Deck, Hand, Card
 from database import db, User, Game, init_db
 from sqlalchemy.orm.attributes import flag_modified
-import datetime
+from flask_login import login_user, LoginManager, UserMixin, current_user, login_required, logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://localhost:5000"])
 app.secret_key = os.environ.get("SECRET_KEY")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 if not app.config["SQLALCHEMY_DATABASE_URI"]:
     raise RuntimeError("DATABASE_URL is not set")
+login_manager = LoginManager()
+login_manager.init_app(app)
 
 db.init_app(app)
 with app.app_context():
@@ -52,20 +56,21 @@ def login_required(f):
 
     return decorated_function
 
-
-@app.route("/api/user/profile")
+@login_manager.user_loader
+def load_user(user_id):
+    if user_id is None:
+        return None
+    return db.session.get(User, int(user_id))
+@app.route("/api/user/profile", methods=["GET"])
 def get_profile():
-    # Get data from debug
-    user_id = session.get("user_id")
-    user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"Error": "No users found"}), 404
+    if not current_user.is_authenticated:
+        return jsonify({"Error": "No users found"}), 401
     return jsonify(
         {
-            "username": user.username,
-            "money": user.money,
-            "wins": user.wins,
-            "losses": user.losses,
+            "username": current_user.username,
+            "money": current_user.money,
+            "wins": current_user.wins,
+            "losses": current_user.losses,
         }
     )
 
@@ -89,7 +94,9 @@ def register():
     try:
         db.session.add(new_user)
         db.session.commit()
-        return jsonify({"message": "User registered successful"})
+        login_user(new_user)
+        return jsonify({"username": new_user.username, "money": new_user.money}), 201
+
     except Exception as e:
         db.session.rollback()
         return jsonify({"Error": str(e)}), 500
@@ -97,18 +104,22 @@ def register():
 
 @app.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     username = data.get("username")
     password = data.get("password")
-
+    if not username or not password:
+        return jsonify({"error": "Missing credentials"}), 400
     user = User.query.filter_by(username=username).first()
 
-    if user and check_password_hash(user.password_hash, password):
-        session["user_id"] = user.id
-        session["username"] = user.username
-        return jsonify({"message": "Login successful", "username": user.username})
+    if not user or not check_password_hash(user.password_hash, password):
+        return jsonify({"error": "Invalid username or password"})
 
-    return jsonify({"error": "Invalid credentials"}), 401
+    return jsonify({
+        "username": user.username,
+        "money": user.money,
+        "wins": user.wins,
+        "losses": user.losses
+    }), 200
 
 
 @app.route("/")
@@ -285,11 +296,11 @@ def stand():
     )
 
 
-@app.route("/logout")
+@app.route("/logout", methods=["POST"])
 def logout():
-    session.clear()
-    return redirect(url_for("login"))
-
+    # Destroys the session cookie
+    logout_user()
+    return jsonify({"message": "Session terminated"}), 200
 
 @app.route("/game")
 @login_required

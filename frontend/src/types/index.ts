@@ -19,3 +19,7 @@ export interface User {
   username: string;
   money: number;
 }
+
+export interface AuthProps {
+  onAuthSuccess: (user: User) => void;
+}
