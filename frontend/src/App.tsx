@@ -31,7 +31,7 @@ function App() {
 
   // --- Profile Fetcher---
   async function fetchProfile() {
-    const res = await fetch("/api/user/profile");
+    const res = await fetch("                  /api/user/profile");
     if (res.ok) {
       const data = await res.json();
       setMoney(data.money);
@@ -44,7 +44,7 @@ function App() {
       <h1>♠️ Operator Blackjack ♦️</h1>
       {/* THE LOGIC GATE*/}
       {!isLoggedIn ? (
-          // Lobby
+        // Lobby
         <AuthForm onAuthSuccess={(data) => {
           setIsLoggedIn(true);
           setUser(data.username);
@@ -59,7 +59,7 @@ function App() {
           money={money}
           onWalletUpdate={() => fetchProfile()}
           onSessionExpire={() => setIsLoggedIn(false)}
-          />
+        />
       )}
     </div>
   );

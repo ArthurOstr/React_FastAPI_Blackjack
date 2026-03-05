@@ -1,18 +1,28 @@
 import os
-from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, request, session, jsonify
 from flask_cors import CORS
 from BJ_classes import Deck, Hand, Card
 from database import db, User, Game, init_db
 from sqlalchemy.orm.attributes import flag_modified
-from flask_login import login_user, LoginManager, UserMixin, current_user, login_required, logout_user
+from flask_login import (
+    login_user,
+    LoginManager,
+    UserMixin,
+    current_user,
+    login_required,
+    logout_user,
+)
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://localhost:5000"])
+CORS(
+    app,
+    supports_credentials=True,
+    origins=["http://localhost:5173", "http://localhost:5000"],
+)
 app.secret_key = os.environ.get("SECRET_KEY")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -45,22 +55,13 @@ def dict_to_hand(card_list):
         return hand
 
 
-# Decorator for login
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        # Guard logic
-        if "user_id" not in session:
-            return jsonify({"error": "Authentication required"}), 401
-        return f(*args, **kwargs)
-
-    return decorated_function
-
 @login_manager.user_loader
 def load_user(user_id):
     if user_id is None:
         return None
     return db.session.get(User, int(user_id))
+
+
 @app.route("/api/user/profile", methods=["GET"])
 def get_profile():
     if not current_user.is_authenticated:
@@ -75,18 +76,18 @@ def get_profile():
     )
 
 
-@app.route("/register", methods=["POST"])
+@app.route("/api/register", methods=["POST"])
 def register():
     data = request.get_json(silent=True) or {}
     username = data.get("username")
     password = data.get("password")
 
     if not username or not password:
-        return jsonify({"error": "Missing username or password"}), 400
+        return jsonify({"error": "Missing username or password"}), 409
 
     # Check if nickname is taken
     if User.query.filter_by(username=username).first():
-        return (jsonify({"error": "Nickname taken! Try another one."}),)
+        return jsonify({"error": "Nickname taken! Try another one."})
 
     # Hash and save password
     hashed_pw = generate_password_hash(password)
@@ -102,7 +103,7 @@ def register():
         return jsonify({"Error": str(e)}), 500
 
 
-@app.route("/login", methods=["POST"])
+@app.route("/api/login", methods=["POST"])
 def login():
     data = request.get_json(silent=True) or {}
     username = data.get("username")
@@ -114,20 +115,16 @@ def login():
     if not user or not check_password_hash(user.password_hash, password):
         return jsonify({"error": "Invalid username or password"})
 
-    return jsonify({
-        "username": user.username,
-        "money": user.money,
-        "wins": user.wins,
-        "losses": user.losses
-    }), 200
+    login_user(user)
 
-
-@app.route("/")
-@login_required
-def home():
-    # fetch the current userdata
-    current_user = db.session.get(User, session["user_id"])
-    return render_template("home.html", user=current_user)
+    return jsonify(
+        {
+            "username": user.username,
+            "money": user.money,
+            "wins": user.wins,
+            "losses": user.losses,
+        }
+    ), 200
 
 
 @app.route("/api/hit", methods=["POST"])
@@ -141,7 +138,7 @@ def hit():
     # Security check
     if not game:
         return jsonify({"error": "Game not found"}), 404
-    if game.user_id != session["user_id"]:
+    if game.user_id != current_user.id:
         return jsonify({"error": "Unauthorized"}), 403
     if game.status != "active":
         return jsonify({"error": "Game is over"}), 400
@@ -168,8 +165,7 @@ def hit():
     if score > 21:
         game.status = "dealer_win"
         message = "Bust! You went over 21."
-        user = db.session.get(User, session["user_id"])
-        user.losses += 1
+        current_user.losses += 1
 
     db.session.commit()
 
@@ -177,6 +173,7 @@ def hit():
         {
             "game_id": game.id,
             "player_hand": game.player_hand,
+            "dealer_hand": game.dealer_hand,
             "score": score,
             "status": game.status,
             "message": message,
@@ -187,15 +184,16 @@ def hit():
 @app.route("/api/deal", methods=["POST"])
 @login_required
 def deal():
-    # Get the user and the bet
-    user = db.session.get(User, session["user_id"])
     # Get bet from JSON body
     data = request.get_json()
     bet_amount = data.get("bet_amount", 10)
     # Can the user afford bet?
-    if user.money < bet_amount:
+    if current_user.money < bet_amount:
         return jsonify({"Error": "You don't have enough money"}), 400
-    user.money -= bet_amount
+    # SQL update to prevent bet from nowhere
+    db.session.query(User).filter(User.id == current_user.id).update(
+        {"money": User.money - bet_amount}
+    )
     # initialize the game object
     deck = Deck()
     player_hand = Hand()
@@ -207,7 +205,7 @@ def deal():
         dealer_hand.add_card(deck.draw())
 
     new_game = Game(
-        user_id=user.id,
+        user_id=current_user.id,
         player_hand=object_to_dict(player_hand),
         dealer_hand=object_to_dict(dealer_hand),
         deck=[{"rank": c.rank, "suit": c.suit} for c in deck.cards],
@@ -222,7 +220,7 @@ def deal():
             "game_id": new_game.id,
             "player_hand": new_game.player_hand,
             "dealer_card": new_game.dealer_hand[0],
-            "user_money": user.money,
+            "user_money": current_user.money,
         }
     )
 
@@ -234,7 +232,7 @@ def stand():
     game_id = data.get("game_id")
     # Fetch the truth
     game = db.session.get(Game, game_id)
-    if not game or game.user_id != session["user_id"] or game.status != "active":
+    if not game or game.user_id != current_user.id or game.status != "active":
         return jsonify({"error": "Invalid game state"}), 400
 
     deck_obj = Deck()
@@ -250,28 +248,27 @@ def stand():
     # Determine winner
     player_score = player_hand.get_value()
     dealer_score = dealer_hand.get_value()
-    user = db.session.get(User, session["user_id"])
 
     result_message = ""
 
     if dealer_score > 21:
         game.status = "player_win"
         result_message = "Dealer busts! You win"
-        user.wins += 1
-        user.money += bet * 2
+        current_user.wins += 1
+        current_user.money += game.bet * 2
     elif dealer_score > player_score:
         game.status = "dealer_win"
         result_message = "Dealer win"
-        user.losses += 1
+        current_user.losses += 1
     elif dealer_score < player_score:
         game.status = "player_wins"
         result_message = "Player wins"
-        user.wins += 1
-        user.money += bet * 2
+        current_user.wins += 1
+        current_user.money += game.bet * 2
     else:
         game.status = "push"
         result_message = "It's a tie"
-        user.money += game.bet
+        current_user.money += game.bet
 
     # Persistence
     game.dealer_hand = object_to_dict(dealer_hand)
@@ -290,43 +287,18 @@ def stand():
             "dealer_hand": game.dealer_hand,
             "dealer_score": dealer_score,
             "player_score": player_score,
-            "user_money": user.money,
+            "user_money": current_user.money,
             "message": result_message,
         }
     )
 
 
-@app.route("/logout", methods=["POST"])
+@app.route("/api/logout", methods=["POST"])
+@login_required
 def logout():
     # Destroys the session cookie
     logout_user()
     return jsonify({"message": "Session terminated"}), 200
-
-@app.route("/game")
-@login_required
-def game_board():
-    user = db.session.get(User, session["user_id"])
-    player_data = session.get("player_hand")
-    dealer_data = session.get("dealer_hand")
-    result = session.get("result")
-    game_over = session.get("game_over")
-
-    if player_data is None:
-        return redirect(url_for("home"))
-    player_hand = dict_to_hand(player_data)
-    dealer_hand = dict_to_hand(dealer_data)
-
-    return render_template(
-        "game.html",
-        username=session.get("username"),
-        user=user,
-        player_hand=player_hand.hand,
-        player_score=player_hand.get_value(),
-        dealer_hand=dealer_data,
-        dealer_score=dealer_hand.get_value(),
-        result=session.get("result"),
-        game_over=session.get("game_over"),
-    )
 
 
 @app.route("/api/test", methods=["GET"])
