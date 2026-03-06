@@ -87,7 +87,7 @@ def register():
 
     # Check if nickname is taken
     if User.query.filter_by(username=username).first():
-        return jsonify({"error": "Nickname taken! Try another one."})
+        return jsonify({"error": "Nickname taken! Try another one."}), 409
 
     # Hash and save password
     hashed_pw = generate_password_hash(password)

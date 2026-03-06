@@ -4,6 +4,7 @@ export const loginUser = async (username: string, password: string): Promise<Use
     const response = await fetch("http://localhost:5000/api/login", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
+        credentials: "include",
         body: JSON.stringify({ username, password }),
     });
     if (!response.ok) {
@@ -15,6 +16,7 @@ export const registerUser = async (username: string, password: string): Promise<
     const response = await fetch("http://localhost:5000/api/register", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
+        credentials: "include",
         body: JSON.stringify({username, password}),
     });
     if (!response.ok) {

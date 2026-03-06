@@ -23,8 +23,12 @@ export default function AuthForm({ onAuthSuccess }: AuthProps) {
               data = await registerUser(username, password);
           }
           onAuthSuccess(data);
+
     } catch (error) {
-        console.error(error)
+        if (error instanceof Error) {
+              console.error("Backend refused:", error.message);
+              alert(error.message);
+          }
     }
       }
       return (

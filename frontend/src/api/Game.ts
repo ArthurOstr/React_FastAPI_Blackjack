@@ -19,7 +19,7 @@ export const dealGame = async (betAmount: number): Promise<GameState> => {
   return response.json();
 };
 
-export const hitGame = async (gameId: string) => {
+export const hitGame = async (gameId: number) => {
   const response = await fetch(`${API_BASE}/hit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -27,10 +27,10 @@ export const hitGame = async (gameId: string) => {
     body: JSON.stringify({ game_id: gameId }),
   });
   if (!response.ok) throw new Error("Hit failed");
-  return response.json
+  return response.json();
 };
 
-export const standGame = async (gameId: string) => {
+export const standGame = async (gameId: number) => {
   const response = await fetch(`${API_BASE}/stand`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
