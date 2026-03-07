@@ -17,13 +17,13 @@ services:
 
   backend:
     restart: on-failure
-    build: .
+    build: ./backend
     ports:
       - "5000:5000"
     env_file:
       - .env
     volumes:
-      - .:/app
+      - ./backend:/app
     environment:
       # We build the URL dynamically using the secrets
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
