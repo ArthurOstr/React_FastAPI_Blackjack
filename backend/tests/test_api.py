@@ -58,3 +58,55 @@ def test_duplicate_registration_returns_409(client):
     data = response.get_json()
     assert "error" in data
     assert data["error"] == "Nickname taken! Try another one."
+
+
+def test_successful_login_returns_200(client):
+
+    client.post(
+        "/api/register", json={"username": "art_player", "password": "my_password"}
+    )
+
+    payload = {"username": "art_player", "password": "my_password"}
+    response = client.post("/api/login", json=payload)
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+    assert data["username"] == "art_player"
+
+
+def test_invalid_login_returns_401(client):
+
+    client.post(
+        "/api/register", json={"username": "art_player", "password": "my_password"}
+    )
+
+    payload = {"username": "art_player", "password": "wrong_password"}
+    response = client.post("/api/login", json=payload)
+
+    assert response.status_code == 401
+
+    data = response.get_json()
+    assert "error" in data
+
+
+def test_protected_deal_route_requires_session(client):
+
+    unauthorized_response = client.post("/api/deal", json={})
+
+    assert unauthorized_response.status_code == 401
+
+    client.post("/api/register", json={"username": "session_tester", "password": "123"})
+    client.post("/api/login", json={"username": "session_tester", "password": "123"})
+
+    authorized_response = client.post("/api/deal", json={})
+
+    assert authorized_response.status_code == 200
+
+    data = authorized_response.get_json()
+
+    assert "game_id" in data
+    assert data["message"] == "Game started"
+    assert "dealer_card" in data
+    assert len(data["player_hand"]) == 2
+    assert data["user_money"] == 990
