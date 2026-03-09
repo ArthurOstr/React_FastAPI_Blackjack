@@ -1,53 +1,45 @@
 import os
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import String, Integer, Numeric
 
-from flask_login import UserMixin
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.dialects.postgresql import JSON
-from dotenv import load_dotenv
+# Define the Database Url
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql+asyncpg://user:passwoord@db:5432/blackjack"
+)
+# create_async_engine
+engine = create_async_engine(DATABASE_URL, echo=True)
+# create_session_factory
+async_session = async_sessionmaker(engine, expire_on_commit=False)
 
-load_dotenv()
 
-db = SQLAlchemy()
+class Base(DeclarativeBase):
+    pass
+
+    # Dependency for FastAPI
 
 
-class User(db.Model, UserMixin):
+async def get_db():
+    async with async_session() as session:
+        yield session
+
+
+class User(Base):
     __tablename__ = "users"
 
-    # Columns
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
-    # Game Stats
-    wins = db.Column(db.Integer, default=0)
-    losses = db.Column(db.Integer, default=0)
-    money = db.Column(db.Integer, default=1000)
-
-    # Relationship
-    games = db.relationship("Game", backref="player", lazy=True)
-
-    def __repr__(self):
-        return f"<User {self.username}>"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    balance: Mapped[float] = mapped_column(Numeric(10, 2), default=1000.00)
 
 
-# State container
-class Game(db.Model):
+class GameState(Base):
     __tablename__ = "games"
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-
-    player_hand = db.Column(JSON, default=list)
-    dealer_hand = db.Column(JSON, default=list)
-    deck = db.Column(JSON, default=list)
-    status = db.Column(db.String(20), default="active")
-    bet = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
-
-    def __repr__(self):
-        return f"Game {self.id} | Status {self.status}>"
-
-
-def init_db(app):
-    with app.app_context():
-        db.create_all()
-        print("Database tables created successfully!")
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    deck: Mapped[str] = mapped_column(String)
+    player_hand: Mapped[str] = mapped_column(String)
+    dealer_hand: Mapped[str] = mapped_column(String)
+    bet: Mapped[float] = mapped_column(Numeric(10, 2))
+    status: Mapped[str] = mapped_column(String(20), default="active")
