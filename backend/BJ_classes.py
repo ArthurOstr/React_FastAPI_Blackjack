@@ -1,25 +1,67 @@
 import random
 
+
 class Deck:
     def __init__(self):
         self.restart()
 
-#taking 1 card from the deck
+    # Taking 1 card from the deck
     def draw(self):
         card = random.choice(self.cards)
         self.cards.remove(card)
         return card
 
-#It seems I can look at cards in my deck
+    # It seems I can look at cards in my deck
     def look_deck(self):
         return len(self.cards)
 
-#reshuffle the deck when needed
+    # Shuffle the deck when needed
     def restart(self):
         suits = ["Clubs", "Diamonds", "Hearts", "Spades"]
-        ranks = ["Jack", "Queen", "King", "Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+        ranks = [
+            "Jack",
+            "Queen",
+            "King",
+            "Ace",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+        ]
         self.cards = [Card(rank, suit) for rank in ranks for suit in suits]
 
+    def serialize(self):
+        """
+        Translating the RAM object into a string for the database
+        Example output: "King_Hearts,2_Spades"
+        """
+        card_strings = []
+        for card in self.cards:
+            card_strings.append(f"{card.rank}_{card.suit}")
+
+        return ",".join(card_strings)
+
+    @classmethod
+    def deseriialize(cls, deck_string):
+        """Builds a Deck from a database string"""
+        # Way to build 52-card deck
+        restored_deck = cls()
+
+        restored_deck.cards = []
+
+        if deck_string:
+            saved_cards = deck_string.split(",")
+
+            for item in saved_cards:
+                rank, suit = item.split("_")
+                restored_deck.cards.append(Card(rank, suit))
+
+        return restored_deck
 
 
 class Card:
@@ -28,7 +70,7 @@ class Card:
         self.suit = suit
         self.visible = visible
 
-#how does card looks like
+    # how does card looks like
     def show(self):
         if not self.visible:
             return "Hidden Card"
@@ -47,7 +89,7 @@ class Hand:
     def __len__(self):
         return len(self.hand)
 
-#adding card to my hand
+    # adding card to my hand
     def add_card(self, card):
         self.hand.append(card)
 
@@ -62,7 +104,7 @@ class Hand:
         removed_card = self.hand.pop(0)
         self.stored_cards.append(removed_card)
 
-        print (f"Success removing {removed_card.show()} from hand.")
+        print(f"Success removing {removed_card.show()} from hand.")
 
     def show_hand(self):
         return [card.show() for card in self.hand]
@@ -76,9 +118,9 @@ class Hand:
         value = 0
         aces = 0
         for card in self.hand:
-            if card.rank in ['Jack', 'Queen', 'King']:
+            if card.rank in ["Jack", "Queen", "King"]:
                 value += 10
-            elif card.rank == 'Ace':
+            elif card.rank == "Ace":
                 aces += 1
                 value += 11
             else:
@@ -88,16 +130,17 @@ class Hand:
             aces -= 1
         return value
 
-#It seems I can look at cards in my hand
+    # It seems I can look at cards in my hand
     def look(self):
         return len(self.hand)
 
+
 class Dealer:
-    def __init__(self,deck):
+    def __init__(self, deck):
         self.deck = deck
         self.hand = Hand()
 
-    def deal_card(self,visible=True):
+    def deal_card(self, visible=True):
         card = self.deck.draw()
         card.visible = visible
         self.hand.add_card(card)
@@ -109,6 +152,7 @@ class Dealer:
     def reveal(self):
         self.hand.multiple_flip()
         print("Dealer revealed his cards")
+
 
 class Player:
 
@@ -140,7 +184,7 @@ class Player:
         self.balance += self.current_bet
         print("It's a push! Bet returned to player.")
 
-    #way to double bet
+    # way to double bet
     def double_bet(self, deck):
         if self.balance >= self.current_bet:
             self.current_bet *= 2
@@ -148,7 +192,3 @@ class Player:
             return True
         elif self.balance <= self.current_bet:
             return False
-
-
-
-
