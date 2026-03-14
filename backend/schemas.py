@@ -32,4 +32,4 @@ class GameStateResponse(BaseModel):
     status: str
 
     # Tells Pydantic to read these fields directly from your SQLAlchemy GameState object
-    model_config = ConfigDict(True)
+    model_config = ConfigDict(from_attributes=True)

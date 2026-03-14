@@ -47,7 +47,7 @@ class Deck:
         return ",".join(card_strings)
 
     @classmethod
-    def deseriialize(cls, deck_string):
+    def deserialize(cls, deck_string):
         """Builds a Deck from a database string"""
         # Way to build 52-card deck
         restored_deck = cls()
@@ -104,7 +104,7 @@ class Hand:
         removed_card = self.hand.pop(0)
         self.stored_cards.append(removed_card)
 
-        print(f"Success removing {removed_card.show()} from hand.")
+        print(f"Success removing {removed_card.show()} from the hand")
 
     def show_hand(self):
         return [card.show() for card in self.hand]
@@ -133,6 +133,27 @@ class Hand:
     # It seems I can look at cards in my hand
     def look(self):
         return len(self.hand)
+
+    def serialize(self):
+        """Translates the Hand into a string for the db"""
+        card_strings = []
+        for card in self.hand:
+            card_strings.append(f"{card.rank}_{card.suit}")
+            return ",".join(card_strings)
+
+    @classmethod
+    def deserialize(cls, hand_stirng):
+        """Builds a Hand object from a db string"""
+        restored_hand = cls()
+
+        if hand_stirng:
+            saved_cards = hand_stirng.split(",")
+            for item in saved_cards:
+                rank, suit = item.split("_")
+                # Rebuild the Card object and add it to the hand
+                restored_hand.add_card(Card(rank, suit))
+
+        return restored_hand
 
 
 class Dealer:

@@ -8,6 +8,7 @@ from jwt.exceptions import InvalidTokenError
 import database
 import schemas
 import auth
+import BJ_classes
 
 app = FastAPI(title="Async Blackjack API")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -87,9 +88,9 @@ async def login(user: schemas.UserCreate, db: AsyncSession = Depends(database.ge
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    acess_token = auth.create_acess_token(data={"sub": db_user.username})
+    access_token = auth.create_access_token(data={"sub": db_user.username})
 
-    return {"access_token": acess_token, "token_type": "Bearer"}
+    return {"access_token": access_token, "token_type": "Bearer"}
 
 
 @app.post("/bet", response_model=schemas.GameStateResponse)
@@ -108,17 +109,19 @@ async def place_bet(
 
     current_user.balance -= bet_request.bet
 
-    # TODO: Store the deck inside db
+    game_deck = BJ_classes.Deck()
+    player_hand = BJ_classes.Hand()
+    dealer_hand = BJ_classes.Hand()
 
-    serialized_deck = "mock_deck"
-    player_staring_hand = "mock_player_cards"
-    dealer_starting_hand = "mock_player_cards"
+    for _ in range(2):
+        player_hand.add_card(game_deck.draw())
+        dealer_hand.add_card(game_deck.draw())
 
     new_game = database.GameState(
         user_id=current_user.id,
-        deck=serialized_deck,
-        player_hand=player_staring_hand,
-        dealer_hand=dealer_starting_hand,
+        deck=game_deck.serialize(),
+        player_hand=player_hand.serialize(),
+        dealer_hand=dealer_hand.serialize(),
         bet=bet_request.bet,
         status="active",
     )
@@ -129,3 +132,67 @@ async def place_bet(
     await db.refresh(new_game)
 
     return new_game
+
+
+@app.post("/action", response_model=schemas.GameStateResponse)
+async def game_action(
+    action_request: schemas.GameActionRequest,
+    current_user: database.User = Depends(get_current_user),
+    db: AsyncSession = Depends(database.get_db),
+):
+    """Processes a Hit or Stand action for the user's active game"""
+
+    # Fetch the user's active game
+    query = select(database.GameState).where(
+        database.GameState.user_id == current_user.id,
+        database.GameState.status == "active",
+    )
+    result = await db.execute(query)
+    game = result.scalars().first()
+
+    if not game:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No active game found. Place a bet first",
+        )
+
+    # Unpack  the strings back into Python objects
+    deck = BJ_classes.Deck.deserialize(game.deck)
+    player_hand = BJ_classes.Hand.deserialize(game.player_hand)
+    dealer_hand = BJ_classes.Hand.deserialize(game.dealer_hand)
+
+    # Game Logic
+    if action_request.action == "hit":
+        player_hand.add_card(deck.draw())
+        if player_hand.get_value() > 21:
+            game.status = "lost"
+
+    elif action_request.action == "stand":
+        while dealer_hand.get_value() < 17:
+            dealer_hand.add_card(deck.draw())
+
+        player_score = player_hand.get_value()
+        dealer_score = dealer_hand.get_value()
+
+        if dealer_score > 21 or player_score > dealer_score:
+            game.status = "won"
+            current_user.balance += game.bet * 2
+
+        elif player_score < dealer_score:
+            game.status = "lost"
+        else:
+            current_user.balance += game.bet
+            game.status = "push"
+    else:
+        raise HTTPException(
+            status_code=400, detail="Invalid action. Use 'hit' or 'stand'"
+        )
+
+    game.deck = deck.serialize()
+    game.player_hand = player_hand.serialize()
+    game.dealer_hand = dealer_hand.serialize()
+
+    await db.commit()
+    await db.refresh(game)
+
+    return game

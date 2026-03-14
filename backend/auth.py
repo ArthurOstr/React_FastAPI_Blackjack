@@ -1,7 +1,7 @@
 import os
 from typing_extensions import deprecated
-from datime import datetime, timedelta, timezone
-from passlib.contect import CryptContext
+from datetime import datetime, timedelta, timezone
+from passlib.context import CryptContext
 import jwt
 
 # Congiguration
@@ -24,7 +24,7 @@ def get_password_hash(password: str) -> str:
 
 
 # JSON Web Token generation
-def create_acess_token(data: dict):
+def create_access_token(data: dict):
     """Generates the JWT pass for the user"""
     to_encode = data.copy()
 

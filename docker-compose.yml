@@ -3,7 +3,6 @@ version: "3.8"
 services:
   db:
     image: postgres:15-alpine
-    # Load secrets from the .env file
     env_file:
       - .env
     environment:
@@ -19,25 +18,25 @@ services:
     restart: on-failure
     build: ./backend
     ports:
-      - "5000:5000"
+      - "8000:8000"
     env_file:
       - .env
     volumes:
       - ./backend:/app
     environment:
-      # We build the URL dynamically using the secrets
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     depends_on:
       - db
+
   frontend:
     build: ./frontend
     ports:
       - "5173:5173"
     volumes:
       - ./frontend:/app
-      - /app/node_modules # <--- CRITICAL: This tells Docker "Don't look at my laptop for this folder, keep it inside."
+      - /app/node_modules 
     environment:
-      - CHOKIDAR_USEPOLLING=true # Helps with hot-reloading on Linux
+      - CHOKIDAR_USEPOLLING=true 
     depends_on:
       - backend
 
