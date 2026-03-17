@@ -1,42 +1,38 @@
 import type { GameState } from '../types/';
 
-const API_BASE = "http://localhost:5000/api";
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`
+  };
+};
 
-export const dealGame = async (betAmount: number): Promise<GameState> => {
-  const response = await fetch(`${API_BASE}/deal`, {
+export const placeBet = async (betAmount: number): Promise<GameState> => {
+  const response = await fetch("/api/bet", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ bet_amount: betAmount }),
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ bet: betAmount }),
   });
 
   if (!response.ok) {
     if (response.status === 401) {
       throw new Error('Please, login to continue');
     }
-    throw new Error("Failed to deal");
+    throw new Error("Failed to place bet");
   }
   return response.json();
 };
 
-export const hitGame = async (gameId: number) => {
-  const response = await fetch(`${API_BASE}/hit`, {
+export const takeAction = async (actionType: "hit" | "stand"): Promise<GameState> => {
+  const response = await fetch("api/action", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ game_id: gameId }),
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ action: actionType }),
   });
-  if (!response.ok) throw new Error("Hit failed");
+  if (!response.ok) throw new Error(`Failed to ${actionType}`);
   return response.json();
 };
 
-export const standGame = async (gameId: number) => {
-  const response = await fetch(`${API_BASE}/stand`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ game_id: gameId }),
-  });
-  if (!response.ok) throw new Error("Stand failed");
-  return response.json();
-};
+export const hitGame = () => takeAction("hit");
+export const standGame = () => takeAction("stand");

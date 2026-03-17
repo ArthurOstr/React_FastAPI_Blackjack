@@ -1,25 +1,21 @@
-export interface Card {
-  rank: string;
-  suit: string;
-}
-
 export interface GameState {
-  game_id: number;
-  player_hand: Card[];
-  dealer_hand?: Card[];
-  dealer_card?: Card;
-  player_score?: number;
-  dealer_score?: number;
-  user_money: number;
-  status: "active" | "player_win" | "dealer_win" | "push";
-  message: string;
+  id: number;
+  user_ild: number;
+  deck: string;
+  player_hand: string;
+  dealer_hand: string;
+  bet: number;
+  status: "active" | "won" | "lost" | "push";
 }
 
-export interface User {
+export interface UserProfile {
   username: string;
-  money: number;
+  balance: number;
+  win_count: number;
+  loss_count: number;
+  active_game: GameState | null;
 }
 
 export interface AuthProps {
-  onAuthSuccess: (user: User) => void;
+  onAuthSuccess: (user: UserProfile) => void;
 }

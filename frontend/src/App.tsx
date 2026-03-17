@@ -2,39 +2,50 @@ import { useState, useEffect } from "react";
 import "./App.css";
 import AuthForm from './auth/AuthForm';
 import GameBoard from "./gameboard/GameBoard.tsx";
+import type { UserProfile } from "./types";
 
 function App() {
   // Auth State
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [user, setUser] = useState<string | null>(null);
-  const [money, setMoney] = useState<number>(0);
-
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   // --- System Check on Load ---
   useEffect(() => {
     // Backend check
-    fetch("/api/test")
+    fetch("/api/")
       .then((res) => res.json())
       .then((data) => console.log("System Check:", data.message))
       .catch((err) => console.error("System Offline:", err));
+    const token = localStorage.getItem("token");
 
-    // Check if the user was logged in
-    fetch("/api/user/profile").then(async (res) => {
-      if (res.ok) {
-        const data = await res.json();
-        setIsLoggedIn(true);
-        setUser(data.username);
-        setMoney(data.money);
-      }
-    });
+    if (token) {
+      fetch("/api/me", {
+        headers: { Authorization: `Bearer ${token}`
+        }
+      }).then(async(res) =>{
+        if (res.ok) {
+          const data: UserProfile = await res.json();
+          setUserProfile(data);
+        } else {
+          localStorage.removeItem("token");
+        }
+      });
+    }
   }, []);
-
 
   // --- Profile Fetcher---
   async function fetchProfile() {
-    const res = await fetch("                  /api/user/profile");
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const res = await fetch("/api/me",{
+      headers: { Authorization: `Bearer ${token}`}
+    });
+
     if (res.ok) {
-      const data = await res.json();
-      setMoney(data.money);
+      const data: UserProfile= await res.json();
+      setUserProfile(data);
+    } else {
+      localStorage.removeItem("token");
+      setUserProfile(null);
     }
   }
 
@@ -43,22 +54,20 @@ function App() {
     <div className="card">
       <h1>♠️ Operator Blackjack ♦️</h1>
       {/* THE LOGIC GATE*/}
-      {!isLoggedIn ? (
+      {!userProfile ? (
         // Lobby
-        <AuthForm onAuthSuccess={(data) => {
-          setIsLoggedIn(true);
-          setUser(data.username);
-          setMoney(data.money);
-        }}
-        />
+        <AuthForm onAuthSuccess={(data) => setUserProfile(data)} />
       ) : (
-
         // Table
         <GameBoard
-          user={user || "Player"}
-          money={money}
+          user={userProfile.username}
+          balance={userProfile.balance}
+          activeGame={userProfile.active_game}
           onWalletUpdate={() => fetchProfile()}
-          onSessionExpire={() => setIsLoggedIn(false)}
+          onSessionExpire={() => {
+            localStorage.removeItem("token");
+            setUserProfile(null);
+          }}
         />
       )}
     </div>

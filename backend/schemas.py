@@ -12,6 +12,8 @@ class UserResponse(BaseModel):
     id: int
     username: str
     balance: Decimal
+    win_count: int
+    loss_count: int
 
 
 # Schemas for the game: INBOUND

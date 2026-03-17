@@ -7,26 +7,9 @@ export default defineConfig({
   server: {
     host: true,
     proxy: {
+      // This ONE rule catches /api/login, /api/register, /api/action, etc.
       "/api": {
-        target: "http://backend:5000", // Still talking to the backend container
-        changeOrigin: true,
-        secure: false,
-      },
-
-      "/login": {
-        target: "http://backend:5000", // Still talking to the backend container
-        changeOrigin: true,
-        secure: false,
-      },
-
-      "/register": {
-        target: "http://backend:5000", // Still talking to the backend container
-        changeOrigin: true,
-        secure: false,
-      },
-
-      "/logout": {
-        target: "http://backend:5000", // Still talking to the backend container
+        target: "http://127.0.0.1:8000",
         changeOrigin: true,
         secure: false,
       },

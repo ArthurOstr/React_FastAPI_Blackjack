@@ -5,6 +5,7 @@ sqlalchemy
 asyncpg
 pyjwt
 passlib[bcrypt]
+bcrypt==3.2.2
 pytest
 pytest-asyncio
 httpx

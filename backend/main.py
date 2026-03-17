@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
+from contextlib import asynccontextmanager
 
 import database
 import schemas
@@ -11,7 +12,7 @@ import auth
 import BJ_classes
 
 app = FastAPI(title="Async Blackjack API")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
 
 
 async def get_current_user(
@@ -41,13 +42,23 @@ async def get_current_user(
     return user
 
 
-@app.get("/")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with database.engine.begin() as conn:
+        await conn.run_sync(database.Base.metadata.create_all)
+    yield
+
+
+app = FastAPI(title="Async Blackjack API", lifespan=lifespan)
+
+
+@app.get("/api/")
 async def root():
     """Check if the server is alive."""
     return {"message": "Blackjack API is running"}
 
 
-@app.post("/register", response_model=schemas.UserResponse)
+@app.post("/api/register", response_model=schemas.UserResponse)
 async def register_user(
     user: schemas.UserCreate, db: AsyncSession = Depends(database.get_db)
 ):
@@ -60,12 +71,18 @@ async def register_user(
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already taken. Try another another",
+            detail="Username already taken. Try another",
         )
     # Hash the password in "str"
     hashed_pwd = auth.get_password_hash(user.password)
     # Create the db object
-    new_user = database.User(username=user.username, password_hash=hashed_pwd)
+    new_user = database.User(
+        username=user.username,
+        password_hash=hashed_pwd,
+        balance=1000.0,
+        win_count=0,
+        loss_count=0
+    )
     db.add(new_user)
     await db.commit()
     # Refresh grabs
@@ -74,7 +91,7 @@ async def register_user(
     return new_user
 
 
-@app.post("/login")
+@app.post("/api/login")
 async def login(user: schemas.UserCreate, db: AsyncSession = Depends(database.get_db)):
 
     query = select(database.User).where(database.User.username == user.username)
@@ -93,7 +110,7 @@ async def login(user: schemas.UserCreate, db: AsyncSession = Depends(database.ge
     return {"access_token": access_token, "token_type": "Bearer"}
 
 
-@app.post("/bet", response_model=schemas.GameStateResponse)
+@app.post("/api/bet", response_model=schemas.GameStateResponse)
 async def place_bet(
     bet_request: schemas.BetRequest,
     current_user: database.User = Depends(get_current_user),
@@ -134,7 +151,7 @@ async def place_bet(
     return new_game
 
 
-@app.post("/action", response_model=schemas.GameStateResponse)
+@app.post("/api/action", response_model=schemas.GameStateResponse)
 async def game_action(
     action_request: schemas.GameActionRequest,
     current_user: database.User = Depends(get_current_user),
@@ -166,6 +183,7 @@ async def game_action(
         player_hand.add_card(deck.draw())
         if player_hand.get_value() > 21:
             game.status = "lost"
+            current_user.loss_count += 1
 
     elif action_request.action == "stand":
         while dealer_hand.get_value() < 17:
@@ -177,9 +195,11 @@ async def game_action(
         if dealer_score > 21 or player_score > dealer_score:
             game.status = "won"
             current_user.balance += game.bet * 2
+            current_user.win_count += 1
 
         elif player_score < dealer_score:
             game.status = "lost"
+            current_user.loss_count += 1
         else:
             current_user.balance += game.bet
             game.status = "push"
@@ -196,3 +216,24 @@ async def game_action(
     await db.refresh(game)
 
     return game
+
+
+@app.get("/api/me")
+async def get_user_status(
+    current_user: database.User = Depends(get_current_user),
+    db: AsyncSession = Depends(database.get_db),
+):
+    query = select(database.GameState).where(
+        database.GameState.user_id == current_user.id,
+        database.GameState.status == "active",
+    )
+    result = await db.execute(query)
+    active_game = result.scalars().first()
+
+    return {
+        "username": current_user.username,
+        "balance": current_user.balance,
+        "win_count": current_user.win_count,
+        "loss_count": current_user.loss_count,
+        "active_game": active_game,
+    }

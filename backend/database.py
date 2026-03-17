@@ -31,6 +31,8 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     balance: Mapped[float] = mapped_column(Numeric(10, 2), default=1000.00)
+    win_count: Mapped[int] = mapped_column(Integer)
+    loss_count: Mapped[int] = mapped_column(Integer)
 
 
 class GameState(Base):
