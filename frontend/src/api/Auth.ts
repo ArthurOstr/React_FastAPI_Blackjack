@@ -29,3 +29,19 @@ export const registerUser = async (username: string, password: string): Promise<
   }
   return response.json();
 };
+export async function logoutUser(): Promise<void> {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    await fetch("/api/logout", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+  } catch (error) {
+    console.error("Logout error: ", error);
+  }
+}

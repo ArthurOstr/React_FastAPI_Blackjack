@@ -1,7 +1,8 @@
 import os
+from datetime import datetime
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import String, Integer, Numeric
+from sqlalchemy import String, Integer, Numeric, DateTime ,ForeignKey, func
 
 # Define the Database Url
 DATABASE_URL = os.getenv(
@@ -31,17 +32,27 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     balance: Mapped[float] = mapped_column(Numeric(10, 2), default=1000.00)
-    win_count: Mapped[int] = mapped_column(Integer)
-    loss_count: Mapped[int] = mapped_column(Integer)
+    win_count: Mapped[int] = mapped_column(Integer, default=0)
+    loss_count: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class GameState(Base):
     __tablename__ = "games"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     deck: Mapped[str] = mapped_column(String)
     player_hand: Mapped[str] = mapped_column(String)
     dealer_hand: Mapped[str] = mapped_column(String)
     bet: Mapped[float] = mapped_column(Numeric(10, 2))
     status: Mapped[str] = mapped_column(String(20), default="active")
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now()
+    )

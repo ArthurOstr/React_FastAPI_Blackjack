@@ -83,41 +83,41 @@ class Card:
 
 class Hand:
     def __init__(self):
-        self.hand = []
+        self.cards = []
         self.stored_cards = []
 
     def __len__(self):
-        return len(self.hand)
+        return len(self.cards)
 
     # adding card to my hand
     def add_card(self, card):
-        self.hand.append(card)
+        self.cards.append(card)
 
     def restart_hand(self):
-        self.hand = []
+        self.cards = []
 
     def remove_card(self):
-        if not self.hand:
+        if not self.cards:
             print("Hand is empty, cannot remove card.")
             return
 
-        removed_card = self.hand.pop(0)
+        removed_card = self.cards.pop(0)
         self.stored_cards.append(removed_card)
 
         print(f"Success removing {removed_card.show()} from the hand")
 
     def show_hand(self):
-        return [card.show() for card in self.hand]
+        return [card.show() for card in self.cards]
 
     def multiple_flip(self):
-        for card in self.hand:
+        for card in self.cards:
             if not card.visible:
                 card.flip()
 
     def get_value(self):
         value = 0
         aces = 0
-        for card in self.hand:
+        for card in self.cards:
             if card.rank in ["Jack", "Queen", "King"]:
                 value += 10
             elif card.rank == "Ace":
@@ -132,14 +132,14 @@ class Hand:
 
     # It seems I can look at cards in my hand
     def look(self):
-        return len(self.hand)
+        return len(self.cards)
 
     def serialize(self):
         """Translates the Hand into a string for the db"""
         card_strings = []
-        for card in self.hand:
+        for card in self.cards:
             card_strings.append(f"{card.rank}_{card.suit}")
-            return ",".join(card_strings)
+        return ",".join(card_strings)
 
     @classmethod
     def deserialize(cls, hand_stirng):
@@ -149,6 +149,8 @@ class Hand:
         if hand_stirng:
             saved_cards = hand_stirng.split(",")
             for item in saved_cards:
+                if item == "Hidden":
+                    continue
                 rank, suit = item.split("_")
                 # Rebuild the Card object and add it to the hand
                 restored_hand.add_card(Card(rank, suit))

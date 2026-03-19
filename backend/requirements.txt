@@ -1,7 +1,7 @@
 fastapi
 uvicorn[standard]
 pydantic
-sqlalchemy
+sqlalchemy>=2.0.0
 asyncpg
 pyjwt
 passlib[bcrypt]

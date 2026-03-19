@@ -7,11 +7,9 @@ export default defineConfig({
   server: {
     host: true,
     proxy: {
-      // This ONE rule catches /api/login, /api/register, /api/action, etc.
       "/api": {
-        target: "http://127.0.0.1:8000",
+        target: "http://backend:8000",
         changeOrigin: true,
-        secure: false,
       },
     },
   },

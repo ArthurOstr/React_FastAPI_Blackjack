@@ -33,6 +33,3 @@ export const takeAction = async (actionType: "hit" | "stand"): Promise<GameState
   if (!response.ok) throw new Error(`Failed to ${actionType}`);
   return response.json();
 };
-
-export const hitGame = () => takeAction("hit");
-export const standGame = () => takeAction("stand");

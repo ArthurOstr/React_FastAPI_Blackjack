@@ -2,6 +2,7 @@ import jwt
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import update
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from contextlib import asynccontextmanager
@@ -41,6 +42,15 @@ async def get_current_user(
 
     return user
 
+async def forfeit_active_games(user_id: int, db: AsyncSession):
+    """Utility function to sweep and kill any dangling active game for a user."""
+    reaper_smt = (
+        update(database.GameState)
+        .where(database.GameState.user_id == user_id)
+        .where(database.GameState.status == "active")
+        .values(status="forfeited")
+    )
+    await db.execute(reaper_smt)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -116,7 +126,10 @@ async def place_bet(
     current_user: database.User = Depends(get_current_user),
     db: AsyncSession = Depends(database.get_db),
 ):
-    """Starts the game for the authenticated user."""
+    """
+    Starts the game for the authenticated user
+    """
+    await forfeit_active_games(current_user.id, db)
 
     # Validate if the user has enough money
     if current_user.balance < bet_request.bet:
@@ -237,3 +250,13 @@ async def get_user_status(
         "loss_count": current_user.loss_count,
         "active_game": active_game,
     }
+
+@app.post("/api/logout")
+async def logout(
+        current_user: database.User = Depends(get_current_user),
+        db: AsyncSession = Depends(database.get_db),
+):
+    await forfeit_active_games(current_user.id, db)
+
+    await db.commit()
+    return {"message": "Server state cleaned. JWT can be destroyed.", "status": "success"}
