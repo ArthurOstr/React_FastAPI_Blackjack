@@ -24,7 +24,7 @@ This system was originally developed as a monolithic Flask application utilizing
 
 ## Local Deployment
 
-**Prerequisites:** * Docker
+**Prerequisites:** Docker
 * Docker Compose
 
 **Execution:**
