@@ -1,11 +1,11 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from decimal import Decimal
 
 
 # Schemas for Auth
 class UserCreate(BaseModel):
-    username: str
-    password: str
+    username: str = Field(..., min_length=1, description="Username cannot be empty")
+    password: str = Field(..., min_length=1, description="Password cannot be empty")
 
 
 class UserResponse(BaseModel):
