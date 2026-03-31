@@ -1,3 +1,4 @@
+import os
 import jwt
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +22,15 @@ app.add_middleware(
         "http://localhost:5173",
         "http://localhost:8000",
     ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[frontend_url],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -278,4 +288,3 @@ async def logout(
         "message": "Server state cleaned. JWT can be destroyed.",
         "status": "success",
     }
-
