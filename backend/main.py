@@ -1,5 +1,6 @@
 import jwt
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update
@@ -13,6 +14,17 @@ import auth
 import BJ_classes
 
 app = FastAPI(title="Async Blackjack API")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://react-fastapi-blackjack.onrender.com",
+        "http://localhost:5173",
+        "http://localhost:8000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
 
 
@@ -42,6 +54,7 @@ async def get_current_user(
 
     return user
 
+
 async def forfeit_active_games(user_id: int, db: AsyncSession):
     """Utility function to sweep and kill any dangling active game for a user."""
     reaper_smt = (
@@ -51,6 +64,7 @@ async def forfeit_active_games(user_id: int, db: AsyncSession):
         .values(status="forfeited")
     )
     await db.execute(reaper_smt)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -91,7 +105,7 @@ async def register_user(
         password_hash=hashed_pwd,
         balance=1000.0,
         win_count=0,
-        loss_count=0
+        loss_count=0,
     )
     db.add(new_user)
     await db.commit()
@@ -251,12 +265,17 @@ async def get_user_status(
         "active_game": active_game,
     }
 
+
 @app.post("/api/logout")
 async def logout(
-        current_user: database.User = Depends(get_current_user),
-        db: AsyncSession = Depends(database.get_db),
+    current_user: database.User = Depends(get_current_user),
+    db: AsyncSession = Depends(database.get_db),
 ):
     await forfeit_active_games(current_user.id, db)
 
     await db.commit()
-    return {"message": "Server state cleaned. JWT can be destroyed.", "status": "success"}
+    return {
+        "message": "Server state cleaned. JWT can be destroyed.",
+        "status": "success",
+    }
+
