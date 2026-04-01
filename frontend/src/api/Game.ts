@@ -1,5 +1,5 @@
 import type { GameState } from '../types/';
-
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return {
@@ -9,7 +9,7 @@ const getAuthHeaders = () => {
 };
 
 export const placeBet = async (betAmount: number): Promise<GameState> => {
-  const response = await fetch("/api/bet", {
+  const response = await fetch(`${BASE_URL}/bet`, {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify({ bet: betAmount }),
@@ -25,7 +25,7 @@ export const placeBet = async (betAmount: number): Promise<GameState> => {
 };
 
 export const takeAction = async (actionType: "hit" | "stand"): Promise<GameState> => {
-  const response = await fetch("api/action", {
+  const response = await fetch(`${BASE_URL}/action`, {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify({ action: actionType }),

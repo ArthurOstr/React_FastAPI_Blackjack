@@ -4,9 +4,10 @@ export interface LoginResponse {
   access_token: string;
   token_type: string;
 }
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export const loginUser = async (username: string, password: string): Promise<LoginResponse> => {
-  const response = await fetch("/api/login", {
+  const response = await fetch(`${BASE_URL}/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
@@ -18,7 +19,7 @@ export const loginUser = async (username: string, password: string): Promise<Log
   return response.json();
 };
 export const registerUser = async (username: string, password: string): Promise<UserProfile> => {
-  const response = await fetch("/api/register", {
+  const response = await fetch(`${BASE_URL}/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
