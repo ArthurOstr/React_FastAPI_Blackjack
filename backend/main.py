@@ -20,10 +20,9 @@ frontend_url = os.getenv("FRONTEND_URL", )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://react-fastapi-blackjack.onrender.com"
-    ],
-    allow_credentials=True,
+   
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
