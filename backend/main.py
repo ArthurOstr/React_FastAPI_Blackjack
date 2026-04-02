@@ -14,11 +14,14 @@ import schemas
 import auth
 import BJ_classes
 
+
 app = FastAPI(title="Async Blackjack API")
+frontend_url = os.getenv("FRONTEND_URL", "https://react-fastapi-blackjack.onrender.com")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://react-fastapi-blackjack.onrender.com",
+        frontend_url,
         "http://localhost:5173",
         "http://localhost:8000",
     ],
@@ -26,16 +29,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[frontend_url],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 
 async def get_current_user(
