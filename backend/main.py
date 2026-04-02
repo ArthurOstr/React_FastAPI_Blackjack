@@ -14,13 +14,18 @@ import schemas
 import auth
 import BJ_classes
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with database.engine.begin() as conn:
+        await conn.run_sync(database.Base.metadata.create_all)
+    yield
 
-app = FastAPI(title="Async Blackjack API")
+app = FastAPI(title="Async Blackjack API", lifespan=lifespan)
 frontend_url = os.getenv("FRONTEND_URL", )
 
 app.add_middleware(
     CORSMiddleware,
-   
+
     allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
@@ -29,7 +34,6 @@ app.add_middleware(
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
-
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(database.get_db)
@@ -67,18 +71,6 @@ async def forfeit_active_games(user_id: int, db: AsyncSession):
         .values(status="forfeited")
     )
     await db.execute(reaper_smt)
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    async with database.engine.begin() as conn:
-        await conn.run_sync(database.Base.metadata.create_all)
-    yield
-
-
-app = FastAPI(title="Async Blackjack API", lifespan=lifespan)
-
-
 @app.get("/")
 async def root():
     """Check if the server is alive."""
