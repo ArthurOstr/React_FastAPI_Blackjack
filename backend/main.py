@@ -16,7 +16,7 @@ import BJ_classes
 
 
 app = FastAPI(title="Async Blackjack API")
-frontend_url = os.getenv("FRONTEND_URL", "https://react-fastapi-blackjack.onrender.com")
+frontend_url = os.getenv("FRONTEND_URL", "https://blackjack-api-8pf8.onrender.com")
 
 app.add_middleware(
     CORSMiddleware,
