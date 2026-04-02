@@ -35,7 +35,7 @@ export async function logoutUser(): Promise<void> {
   if (!token) return;
 
   try {
-    await fetch("/api/logout", {
+    await fetch(`${BASE_URL}/logout`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${token}`,

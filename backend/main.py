@@ -86,13 +86,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Async Blackjack API", lifespan=lifespan)
 
 
-@app.get("/api/")
+@app.get("/")
 async def root():
     """Check if the server is alive."""
     return {"message": "Blackjack API is running"}
 
 
-@app.post("/api/register", response_model=schemas.UserResponse)
+@app.post("/register", response_model=schemas.UserResponse)
 async def register_user(
     user: schemas.UserCreate, db: AsyncSession = Depends(database.get_db)
 ):
@@ -125,7 +125,7 @@ async def register_user(
     return new_user
 
 
-@app.post("/api/login")
+@app.post("/login")
 async def login(user: schemas.UserCreate, db: AsyncSession = Depends(database.get_db)):
 
     query = select(database.User).where(database.User.username == user.username)
@@ -144,7 +144,7 @@ async def login(user: schemas.UserCreate, db: AsyncSession = Depends(database.ge
     return {"access_token": access_token, "token_type": "Bearer"}
 
 
-@app.post("/api/bet", response_model=schemas.GameStateResponse)
+@app.post("/bet", response_model=schemas.GameStateResponse)
 async def place_bet(
     bet_request: schemas.BetRequest,
     current_user: database.User = Depends(get_current_user),
@@ -188,7 +188,7 @@ async def place_bet(
     return new_game
 
 
-@app.post("/api/action", response_model=schemas.GameStateResponse)
+@app.post("/action", response_model=schemas.GameStateResponse)
 async def game_action(
     action_request: schemas.GameActionRequest,
     current_user: database.User = Depends(get_current_user),
@@ -255,7 +255,7 @@ async def game_action(
     return game
 
 
-@app.get("/api/me")
+@app.get("/me")
 async def get_user_status(
     current_user: database.User = Depends(get_current_user),
     db: AsyncSession = Depends(database.get_db),
@@ -276,7 +276,7 @@ async def get_user_status(
     }
 
 
-@app.post("/api/logout")
+@app.post("/logout")
 async def logout(
     current_user: database.User = Depends(get_current_user),
     db: AsyncSession = Depends(database.get_db),

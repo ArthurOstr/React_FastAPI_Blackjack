@@ -5,6 +5,8 @@ import { loginUser, registerUser } from "../api/Auth";
 interface AuthProps {
     onAuthSuccess: (user: UserProfile) => void;
 }
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
 
 export default function AuthForm({ onAuthSuccess }: AuthProps) {
     const [isLoginView, setIsLoginView] = useState<boolean>(false);
@@ -28,7 +30,7 @@ export default function AuthForm({ onAuthSuccess }: AuthProps) {
             }
             localStorage.setItem("token", token);
 
-            const meResponse = await fetch("/api/me", {
+            const meResponse = await fetch(`${BASE_URL}/me`, {
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`,
