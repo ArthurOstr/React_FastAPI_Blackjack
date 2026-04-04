@@ -3,15 +3,40 @@ import type { GameState } from "../types";
 import { placeBet, takeAction } from "../api/Game";
 import { logoutUser } from "../api/Auth";
 
+// OUTSIDE COMPONENTS
+
+function calculateScore(cardsArray: string[]) {
+  let value = 0;
+  let aces = 0;
+
+  for (const card of cardsArray) {
+    if (!card || card === "Hidden") continue;
+
+    const rank = card.split("_")[0];
+    if (["Jack", "Queen", "King"].includes(rank)) {
+      value += 10;
+    } else if (rank === "Ace") {
+      aces += 1;
+      value += 11;
+    } else {
+      value += parseInt(rank);
+    }
+  }
+  while (value > 21 && aces > 0) {
+    value -= 10;
+    aces -= 1;
+  }
+  return value;
+}
 const PlayingCard = ({ cardString }: { cardString: string }) => {
   if (cardString === "Hidden_Card" || cardString === "Hidden") {
     return (
-        <div style={{
-          width: "80px", height: "120px", backgroundColor: "#000080",
-          border: "2px solid white", borderRadius: "8px", margin: "5px",
-          backgroundImage:"repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px)",
-          boxShadow: "2px 2px 5px rgba(0,0,0,0.3)"
-        }} />
+      <div style={{
+        width: "80px", height: "120px", backgroundColor: "#000080",
+        border: "2px solid white", borderRadius: "8px", margin: "5px",
+        backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px)",
+        boxShadow: "2px 2px 5px rgba(0,0,0,0.3)"
+      }} />
     );
   }
 
@@ -56,10 +81,12 @@ interface GameBoardProps {
   onSessionExpire: () => void;
 }
 
+// MAIN COMPONENT
+
 export default function GameBoard({ user, balance, activeGame, onWalletUpdate, onSessionExpire }: GameBoardProps) {
   const [gameState, setGameState] = useState<GameState | null>(activeGame);
   const [message, setMessage] = useState<string>("Ready to play?");
-  const [betAmount, setBetAmount] = useState(50);
+  const [betAmount, setBetAmount] = useState<number | "">(50);
   const [prevGameId, setPrevGameId] = useState(50);
 
   if (activeGame && activeGame.id !== prevGameId) {
@@ -67,29 +94,29 @@ export default function GameBoard({ user, balance, activeGame, onWalletUpdate, o
     setGameState(activeGame);
   }
 
-  function calculateScore(cardsArray: string[]) {
-    let value = 0;
-    let aces = 0;
+  const handleBetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
 
-    for (const card of cardsArray) {
-      if (!card || card === "Hidden") continue;
+    if (val === "") {
+      setBetAmount("");
+      return;
+    }
+    if (/^\d+$/.test(val)) {
+      const numericValue = Number(val);
 
-      const rank = card.split("_")[0];
-      if (["Jack", "Queen", "King"].includes(rank)) {
-        value += 10;
-      } else if (rank === "Ace"){
-        aces += 1;
-        value += 11;
+      if (numericValue > balance) {
+        setBetAmount(balance);
       } else {
-        value += parseInt(rank);
+        setBetAmount(numericValue);
       }
     }
-    while (value > 21 && aces > 0) {
-      value -= 10;
-      aces -= 1;
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      void handleDeal();
     }
-    return value;
-  }
+  };
 
   async function handleLogout() {
     await logoutUser();
@@ -98,8 +125,16 @@ export default function GameBoard({ user, balance, activeGame, onWalletUpdate, o
   }
 
   async function handleDeal() {
+
+    const finalBet = betAmount === "" ? 0 : betAmount;
+
+    if (finalBet < 1) {
+      setMessage("Please enter a bet of at least $1.");
+      return;
+    }
+
     try {
-      const data = await placeBet(betAmount);
+      const data = await placeBet(finalBet);
       setGameState(data);
       setMessage("Good luck! Hit or Stand.");
       onWalletUpdate();
@@ -138,7 +173,8 @@ export default function GameBoard({ user, balance, activeGame, onWalletUpdate, o
   const dealerScore = calculateScore(dealerCardsArray);
 
   return (
-    <div className="game-board" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
+    <div className="game-board"
+      style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
 
       {/* 1. Header Area */}
       <div style={{
@@ -190,7 +226,8 @@ export default function GameBoard({ user, balance, activeGame, onWalletUpdate, o
       </div>
 
       {/* 2. The Table Area */}
-      <div className="table" style={{ display: "flex", flexDirection: "column", gap: "30px", alignItems: "center", width: "100%" }}>
+      <div className="table"
+        style={{ display: "flex", flexDirection: "column", gap: "30px", alignItems: "center", width: "100%" }}>
 
         {dealerCardsArray.length > 0 && (
           <div className="hand dealer-hand" style={{ textAlign: "center" }}>
@@ -220,29 +257,63 @@ export default function GameBoard({ user, balance, activeGame, onWalletUpdate, o
         )}
       </div>
 
-      {/* 3. The Control Panel (Now correctly below the cards) */}
+      {/* 3. The Control Panel */}
       <div className="actions" style={{ marginTop: "10px" }}>
         {(!gameState || gameState.status !== "active") ? (
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", backgroundColor: "#333", padding: "15px", borderRadius: "10px" }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            backgroundColor: "#333",
+            padding: "15px",
+            borderRadius: "10px"
+          }}>
             <label style={{ fontSize: "16px", fontWeight: "bold", color: "white" }}>Bet: $</label>
             <input
-              type="number"
-              min="1"
-              max={balance}
+              type="text"
               value={betAmount}
-              onChange={(e) => setBetAmount(Number(e.target.value))}
+              onChange={handleBetChange}
+              onKeyDown={handleKeyDown}
+              className="bet-input"
               style={{ padding: "8px", fontSize: "16px", width: "90px", borderRadius: "5px", border: "none" }}
             />
-            <button onClick={handleDeal} style={{ padding: "10px 20px", fontSize: "16px", cursor: "pointer", backgroundColor: "#1976d2", color: "white", border: "none", borderRadius: "5px", fontWeight: "bold" }}>
+            <button onClick={handleDeal} style={{
+              padding: "10px 20px",
+              fontSize: "16px",
+              cursor: "pointer",
+              backgroundColor: "#1976d2",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              fontWeight: "bold"
+            }}>
               Deal Hand
             </button>
           </div>
         ) : (
           <div style={{ display: "flex", gap: "15px" }}>
-            <button onClick={() => handleAction("hit")} style={{ padding: "12px 30px", fontSize: "18px", cursor: "pointer", backgroundColor: "#388e3c", color: "white", border: "none", borderRadius: "5px", fontWeight: "bold" }}>
+            <button onClick={() => handleAction("hit")} style={{
+              padding: "12px 30px",
+              fontSize: "18px",
+              cursor: "pointer",
+              backgroundColor: "#388e3c",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              fontWeight: "bold"
+            }}>
               HIT
             </button>
-            <button onClick={() => handleAction("stand")} style={{ padding: "12px 30px", fontSize: "18px", cursor: "pointer", backgroundColor: "#d32f2f", color: "white", border: "none", borderRadius: "5px", fontWeight: "bold" }}>
+            <button onClick={() => handleAction("stand")} style={{
+              padding: "12px 30px",
+              fontSize: "18px",
+              cursor: "pointer",
+              backgroundColor: "#d32f2f",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              fontWeight: "bold"
+            }}>
               STAND
             </button>
           </div>
