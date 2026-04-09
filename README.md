@@ -35,7 +35,7 @@ This system was deliberately migrated from a monolithic Flask/Jinja2 application
 * **DevOps:** Docker, Docker Compose, GitHub Actions
 * **Deployment:** Render
 
-## 🚀 Local Deployment
+## Local Deployment
 
 **Prerequisites:** Docker, Docker Compose
 
