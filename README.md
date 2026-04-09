@@ -1,38 +1,36 @@
-# Operator Blackjack
+Operator Blackjack
+🃏 Live Demo:https://react-fastapi-blackjack.onrender.com
+A production-deployed, containerized full-stack web application featuring a decoupled React frontend and a FastAPI backend, orchestrated via Docker Compose.
 
-A containerized full-stack web application featuring a decoupled React frontend and a FastAPI backend, managed via Docker Compose.
-
-## System Architecture
+System Architecture
 This project operates on a microservice architecture, separating the client interface from the game logic and database layers.
+LayerTechnologyRoleBackendFastAPI (Python)Stateless REST API — game logic, deck state, validationDatabasePostgreSQL + SQLAlchemyPersistent session state and user dataFrontendReact + TypeScript + ViteStrictly typed client, async HTTP communicationAuthJWTSecure session and game state trackingInfrastructureDocker + Docker ComposeFull environment containerizationCI/CDGitHub ActionsAutomated multi-container build verification on every push
 
-* **Backend:** A stateless REST API built with Python and FastAPI. It handles game logic, deck state, and validation.
-* **Database:** PostgreSQL, integrated via SQLAlchemy ORM for persistent session state and user data storage.
-* **Frontend:** A strictly typed React application built with TypeScript and bundled with Vite. It communicates with the backend via asynchronous HTTP requests, utilizing a Vite reverse-proxy during local development to bypass CORS restrictions.
-* **Authentication:** User sessions and game states are secured and tracked using JWTs (JSON Web Tokens).
-* **Infrastructure:** The entire stack is containerized using Docker and orchestrated with Docker Compose, ensuring environment parity across different machines.
-* **CI/CD:** Automated build pipelines configured via GitHub Actions to verify multi-container compilation on every push.
+Architectural Evolution
+This system was deliberately migrated from a monolithic Flask/Jinja2 application to a decoupled architecture to enforce strict typing, eliminate server-side rendering constraints, and align with modern API design principles.
 
-## Tech Stack
-* **Languages:** Python 3, TypeScript, HTML/CSS
-* **Backend Framework:** FastAPI
-* **Frontend Framework:** React
-* **Database Engine:** PostgreSQL
-* **DevOps:** Docker, Docker Compose, GitHub Actions
+V1: Monolithic Flask app with Jinja2 server-side templating
+V2: Decoupled FastAPI backend + React frontend, fully containerized, production-deployed
 
-## Evolution & Migration
-This system was originally developed as a monolithic Flask application utilizing Jinja server-side templating. It was actively refactored into its current state—a decoupled FastAPI backend and React frontend—to enforce strict typing, improve asynchronous state management, and align with modern enterprise API architecture.
+The migration was driven by architectural intent — not framework preference.
 
-## Local Deployment
+Tech Stack
 
-**Prerequisites:** Docker
-* Docker Compose
+Languages: Python 3, TypeScript, HTML/CSS
+Backend: FastAPI, Pydantic, SQLAlchemy
+Frontend: React, Vite
+Database: PostgreSQL
+DevOps: Docker, Docker Compose, GitHub Actions
+Deployment: Render
 
-**Execution:**
-1. Clone the repository.
-2. Navigate to the project root directory.
-3. Run the following command to build and attach the containers:
-   `docker compose up --build`
 
+Local Deployment
+Prerequisites: Docker, Docker Compose
+bashgit clone https://github.com/ArthurOstr/React_FastAPI_Blackjack
+cd React_FastAPI_Blackjack
+docker compose up --build
+ServiceURLFrontend UIhttp://localhost:5173Backend API (Swagger)http://localhost:8000/docs
+
+Production Deployment
+Live instance deployed on Render with environment-separated configuration. Backend and frontend are served independently with production CORS policy enforced. Environment variables are injected at runtime — no secrets are stored in the repository.
 **Access Points:**
-* Frontend UI: `http://localhost:5173`
-* Backend API Documentation (Swagger UI): `http://localhost:8000/docs`
