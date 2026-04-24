@@ -2,14 +2,21 @@ import os
 from datetime import datetime
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import String, Integer, Numeric, DateTime ,ForeignKey, func
+from sqlalchemy import String, Integer, Numeric, DateTime, ForeignKey, func
 
 # Define the Database Url
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql+asyncpg://user:passwoord@db:5432/blackjack"
 )
+
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "posgresql+asyncpg://", 1)
 # create_async_engine
-engine = create_async_engine(DATABASE_URL, echo=True)
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=True,
+    connect_args={"ssl": "require"} if "neon.tech" in DATABASE_URL else {},
+)
 # create_session_factory
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -52,7 +59,5 @@ class GameState(Base):
         server_default=func.now(),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now()
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
